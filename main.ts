@@ -4,6 +4,7 @@
 const listSize:number = 256;
 const clampingRange: number[] = [-1664, 1664]
 const noiseRange: number[] = [-1,1]
+const maxStrLen = Math.floor(listSize/8);
 
 /**********
  * MATRIX *
@@ -25,12 +26,12 @@ function clamp(x: number): number{
   }
 }
 
-function l(v:number=0): List{
+function initList(v:number=0): List{
   return Array(listSize).fill(v);
 }
 
 function mtx(h: number, v: number=0): Matrix{
-  return Array(h).fill(l(v));
+  return Array(h).fill(initList(v));
 }
 
 function rotateRight(arr: List, n: number): List{
@@ -58,10 +59,10 @@ function multiply(a: List, b: List): List{
     console.error("Lists must have exactly " + listSize + " elements")
   }
   
-  let sum: List = l();
+  let sum: List = initList();
   let i = 0;
   while(i < listSize){
-    let term: List = l()
+    let term: List = initList()
     let j = 0;
     while(j < listSize){
       term[j] = a[j] * b[i]
@@ -86,7 +87,7 @@ function multiply(a: List, b: List): List{
 
 function addLists(a: List, b: List): List{
   let i = 0;
-  let result: List = l();
+  let result: List = initList();
   while(i < listSize-1){
     result[i] = clamp(a[i] + b[i])
     i++;
@@ -96,7 +97,7 @@ function addLists(a: List, b: List): List{
 
 function subtractLists(a: List, b: List): List{
   let i = 0;
-  let result: List = l();
+  let result: List = initList();
   while(i < listSize-1){
     result[i] = clamp(a[i] - b[i])
     i++;
@@ -269,8 +270,68 @@ function decrypt(encrypted: List, senderKeys: [List, List], signalSecret: Matrix
 }
 
 /****************
- * LIST TO STRING *
+ * LIST and STRING *
  ****************/
+
+function stringToBinary(s: string): string{
+  var output = "";
+  for (var i = 0; i < s.length; i++) {
+      output += s[i].charCodeAt(0).toString(2) + "";
+  }
+  return output;
+}
+
+function stringToList(s: string): List{
+  if(s.length > maxStrLen){
+    console.error("Message strings can only be up to " + maxStrLen + " characters")
+    return initList()
+  } 
+  var l: List = initList();
+  let bin = stringToBinary(s);
+  var n = 0;
+  if(s.length > listSize){
+      console.error("Message strings can only be up to " + maxStrLen + " characters")
+      return initList()
+  }
+  while(n < bin.length){
+    l[n] = parseInt(bin[n]) * clampingRange[0]
+    n = n + 1;
+  }
+  return l;
+}
+
+function parsedBinaryToString(str: string): string{
+  let binString = '';
+
+  str.split(' ').map(function(bin) {
+      binString += String.fromCharCode(parseInt(bin, 2));
+    });
+  return binString;
+}
+
+function binaryToString(input: string): string{
+  let r: string = "";
+  let n = 0;
+  while ((n < input.length) && (input.length-n > 7)){
+    let sliced = input.slice(n, n+8)
+    if(sliced == "00000000" || sliced == "11111111"){
+      break;
+    }
+    r = r + sliced + " ";
+    n = n + 8;
+  }
+  // remove last space
+  r = r.slice(0,r.length-1);
+  //to string from parsed bin
+  r = parsedBinaryToString(r);
+  return r;
+}
+
+function listToString(l: List): string{
+  let str = l.join("")
+  str = str.replace(String(clampingRange[0]),"1")
+  return binaryToString(str);
+}
 
 /*********
  * KYBER *
