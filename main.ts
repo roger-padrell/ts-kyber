@@ -105,6 +105,24 @@ function subtractLists(a: List, b: List): List{
   return result;
 }
 
+function parseMatrix(size: number, fromString: string): Matrix{ 
+  var splitted = fromString.split(",");
+  var res: Matrix = mtx(size);
+  var n = 0;
+  var list = 0;
+  var item = 0;
+  while(n<splitted.length){
+    var replaced = splitted[n].replace("[","").replace("]","").replace("(","").replace(")","").replace(" ","")
+    res[list][item] = parseInt(replaced);
+
+    // Change list, item and n
+    n = n + 1;
+    item = n % listSize;
+    list = Math.floor((n - item) / listSize);
+  }
+  return res;
+}
+
 /********
  * KEYS *
  ********/
@@ -223,12 +241,12 @@ function generateSenderEncryptionKey(table: Matrix, signal_secret: Matrix, noise
   return [public1, public2]
 }
 
-function encryptMessage(message: List, signalSecret: Matrix, reciverPublicKey: [List,List]): List{
+function encryptMessage(message: List, signalSecret: Matrix, reciverPublicKey: [List,List]): Matrix{
     let term1 = multiply(signalSecret[0], reciverPublicKey[0]);
     let term2 = multiply(signalSecret[1], reciverPublicKey[1]);
     let sumTerms1 = addLists(term1, term2)
     let encrypted = addLists(sumTerms1, message);
-    return encrypted
+    return [encrypted]
 }
 
 /***********
@@ -260,10 +278,10 @@ function bigOrSmall(noisedMessage: List): List{
     return message;
 }
 
-function decrypt(encrypted: List, senderKeys: [List, List], signalSecret: Matrix): List{
+function decrypt(encrypted: Matrix, senderKeys: [List, List], signalSecret: Matrix): List{
     let term1 = multiply(senderKeys[0], signalSecret[0]);
     let term2 = multiply(senderKeys[1], signalSecret[1]);
-    let noisedMessage = subtractLists(subtractLists(encrypted, term1), term2);
+    let noisedMessage = subtractLists(subtractLists(encrypted[0], term1), term2);
 
     let message = bigOrSmall(noisedMessage);
     return message;
@@ -337,6 +355,158 @@ function listToString(l: List): string{
  * KYBER *
  *********/
 
+type Kyber = {
+  signalSecret: Matrix,
+  publicTable: Matrix,
+  noiseSecret: Matrix,
+  publicKeys: [List, List]
+}
+
+type Message = {
+  encryptedMessage: Matrix,
+  senderPublicKeys: [List, List]
+}
+    
+type KyberSender = {
+  signalSecret: Matrix,
+  publicTable: Matrix,
+  noiseSecret: Matrix,
+  reciverPublicKeys: [List, List],
+  senderPublicKeys: [List, List]
+}
+
+type PublicKyber = {
+  publicTable: Matrix,
+  publicKeys: [List,List]
+}
+
+export function createKyberFrom(publicTable: Matrix, signalSecret: Matrix, noiseSecret: Matrix): Kyber{
+  let publicKeys = generatePublicKey(publicTable, signalSecret, noiseSecret);
+  var k: Kyber = {noiseSecret, signalSecret, publicTable, publicKeys };
+  return k;
+}
+
+export function createRandomKyber(): Kyber{
+  var k: Kyber = createKyberFrom(generatePublicTable(), generateSignalSecret(), generateNoiseSecret());
+  return k;
+}
+
+export function createMessageSender(publicTable: Matrix, reciverPublicKeys: [List, List]): KyberSender{
+  let noiseSecret = generateSenderNoiseSecret();
+  let signalSecret = generateSenderSignalSecret();
+  let senderPublicKeys = generateSenderEncryptionKey(publicTable, signalSecret, noiseSecret)
+  var k: KyberSender = {publicTable, reciverPublicKeys, noiseSecret, signalSecret, senderPublicKeys};
+  return k;
+}
+
+export function sendMessage(k: KyberSender, message: List): Message {
+  let encryptedMessage = encryptMessage(message, k.signalSecret, k.reciverPublicKeys);
+  let m: Message = {encryptedMessage: encryptedMessage, senderPublicKeys: k.senderPublicKeys}
+  return m;
+}
+
+export function sendString(k: KyberSender, mess: string): Message{
+  var message: List = stringToList(mess)
+  if(message == message.fill(0)){
+    console.warn("Message is blank, maybe some error expressed previously")
+    return {encryptedMessage: [initList()], senderPublicKeys: [initList(),initList()]};
+  }
+  var m: Message = {encryptedMessage: encryptMessage(message, k.signalSecret, k.reciverPublicKeys), senderPublicKeys: k.senderPublicKeys};
+  return m;
+}
+
+export function recieveMessage(k: Kyber, m: Message): List{ 
+  return decrypt(m.encryptedMessage, m.senderPublicKeys, k.signalSecret)
+}
+
+export function recieveString(k: Kyber, me: Message): string {
+  let m = recieveMessage(k, me)
+  return listToString(m);
+}
+
+// Exporting
+export function  toPublic(k: Kyber): PublicKyber{
+  var p: PublicKyber = {publicKeys: k.publicKeys, publicTable: k.publicTable};
+  return p;
+}
+
+export function publicString(p: PublicKyber): string{
+  let publicKeys = JSON.stringify(p.publicKeys);
+  let parr = publicKeys.split("")
+  parr[0] = "(";
+  parr[parr.length-1] = ")";
+  publicKeys = parr.join("")
+  var str = {publicTable: JSON.stringify(p.publicTable), publicKeys}
+  return JSON.stringify(str);
+}
+
+export function exportFullKyber(k: Kyber): string{
+  let publicKeys = JSON.stringify(k.publicKeys);
+  let parr = publicKeys.split("")
+  parr[0] = "(";
+  parr[parr.length-1] = ")";
+  publicKeys = parr.join("")
+  var str = {signalSecret: JSON.stringify(k.signalSecret), publicTable: JSON.stringify(k.publicTable), noiseSecret: JSON.stringify(k.noiseSecret), publicKeys}
+  return JSON.stringify(str);
+}
+
+export function exportMessage(m: Message): string{
+  let publicKeys = JSON.stringify(m.senderPublicKeys);
+  let parr = publicKeys.split("")
+  parr[0] = "(";
+  parr[parr.length-1] = ")";
+  publicKeys = parr.join("")
+  var str = {encryptedMessage: JSON.stringify(m.encryptedMessage), senderPublicKeys: publicKeys}
+  return JSON.stringify(str);
+}
+
+// Importing
+export function importPublicKyber(s: string): PublicKyber{ 
+  var js = JSON.parse(s);
+  let publicTable = parseMatrix(4, js.publicTable);
+  let publicKeyStr = js.publicKeys;
+  let parr = publicKeyStr.split("")
+  parr[0] = "[";
+  parr[parr.length-1] = "]";
+  publicKeyStr = parr.join("")
+  var pKeys: Matrix = parseMatrix(2, publicKeyStr)
+  let publicKeys: [List, List] = [pKeys[0], pKeys[1]]
+  var pk: PublicKyber = {publicKeys, publicTable};
+  return pk;
+};
+
+export function importFullKyber(s: string): Kyber{
+  var js = JSON.parse(s);
+  let publicTable = parseMatrix(4, js.publicTable);
+  let noiseSecret = parseMatrix(4, js.noiseSecret);
+  let signalSecret = parseMatrix(4, js.signalSecret);
+  let publicKeyStr = js.publicKeys;
+  let parr = publicKeyStr.split("")
+  parr[0] = "[";
+  parr[parr.length-1] = "]";
+  publicKeyStr = parr.join("")
+  var pKeys: Matrix = parseMatrix(2, publicKeyStr)
+  let publicKeys: [List, List] = [pKeys[0], pKeys[1]]
+  var pk: Kyber = {publicKeys, publicTable, noiseSecret, signalSecret};
+  return pk;
+}
+
+export function importMessage(s: string): Message{
+  var js = JSON.parse(s);
+  let encryptedMessage = parseMatrix(1, js.encryptedMessage);
+  let publicKeyStr = js.publicKeys;
+  let parr = publicKeyStr.split("")
+  parr[0] = "[";
+  parr[parr.length-1] = "]";
+  publicKeyStr = parr.join("")
+  var pKeys: Matrix = parseMatrix(2, publicKeyStr)
+  let publicKeys: [List, List] = [pKeys[0], pKeys[1]]
+  var pk: Message = {encryptedMessage, senderPublicKeys: publicKeys};
+  return pk;
+}
+
 /***********
  * EXPORTS *
  ***********/
+
+export type { Kyber, Message, KyberSender, PublicKyber}
