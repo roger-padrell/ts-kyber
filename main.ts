@@ -291,12 +291,14 @@ function decrypt(encrypted: Matrix, senderKeys: [List, List], signalSecret: Matr
  * LIST and STRING *
  ****************/
 
-function stringToBinary(s: string): string{
-  var output = "";
-  for (var i = 0; i < s.length; i++) {
-      output += s[i].charCodeAt(0).toString(2) + "";
-  }
-  return output;
+function stringToBinary(text: string): string{
+  var length = text.length,
+      output = [];
+  for (var i = 0;i < length; i++) {
+    var bin = text[i].charCodeAt(0).toString(2);
+    output.push(Array(8-bin.length+1).join("0") + bin);
+  } 
+  return output.join("");
 }
 
 function stringToList(s: string): List{
@@ -347,7 +349,7 @@ function binaryToString(input: string): string{
 
 function listToString(l: List): string{
   let str = l.join("")
-  str = str.replace(String(clampingRange[0]),"1")
+  str = str.replaceAll(String(clampingRange[0]),"1")
   return binaryToString(str);
 }
 
@@ -407,7 +409,7 @@ export function sendMessage(k: KyberSender, message: List): Message {
 
 export function sendString(k: KyberSender, mess: string): Message{
   var message: List = stringToList(mess)
-  if(message == message.fill(0)){
+  if(message == initList()){
     console.warn("Message is blank, maybe some error expressed previously")
     return {encryptedMessage: [initList()], senderPublicKeys: [initList(),initList()]};
   }
