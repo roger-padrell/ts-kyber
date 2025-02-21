@@ -497,7 +497,6 @@ export function importMessage(s: string): Message{
   var js = JSON.parse(s);
   let encryptedMessage = parseMatrix(1, js.encryptedMessage);
   let publicKeyStr = js.senderPublicKeys;
-  console.log(js)
   let parr = publicKeyStr.split("")
   parr[0] = "[";
   parr[parr.length-1] = "]";
