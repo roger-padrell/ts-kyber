@@ -1,14 +1,8 @@
-/**********
- * CONSTS *
- **********/
 const listSize:number = 256;
 const clampingRange: number[] = [-1664, 1664]
 const noiseRange: number[] = [-1,1]
 const maxStrLen = Math.floor(listSize/8);
 
-/**********
- * MATRIX *
- **********/
 type List = Array<number>;
 
 type Matrix = List[]
@@ -123,10 +117,6 @@ function parseMatrix(size: number, fromString: string): Matrix{
   return res;
 }
 
-/********
- * KEYS *
- ********/
-
 function rand(n: number, m: number){
   return Math.floor(Math.random() * (m-n+1)) + n 
 }
@@ -192,10 +182,6 @@ function generatePublicKey(table: Matrix, signal_secret: Matrix, noise_secret: M
   return [public1, public2]
 }
 
-/***********
- * ENCRYPT *
- ***********/
-
 function generateSenderSignalSecret(): Matrix{ 
   var m: Matrix = mtx(2);
   var r = 0;
@@ -249,10 +235,6 @@ function encryptMessage(message: List, signalSecret: Matrix, reciverPublicKey: [
     return [encrypted]
 }
 
-/***********
- * DECRYPT *
- ***********/
-
 function inRng(v: number, x: number, y: number): boolean{
   if(v <= y && v >= x){
     return true;
@@ -286,10 +268,6 @@ function decrypt(encrypted: Matrix, senderKeys: [List, List], signalSecret: Matr
     let message = bigOrSmall(noisedMessage);
     return message;
 }
-
-/****************
- * LIST and STRING *
- ****************/
 
 function stringToBinary(text: string): string{
   var length = text.length,
@@ -352,10 +330,6 @@ function listToString(l: List): string{
   str = str.replaceAll(String(clampingRange[0]),"1")
   return binaryToString(str);
 }
-
-/*********
- * KYBER *
- *********/
 
 type Kyber = {
   signalSecret: Matrix,
@@ -506,9 +480,5 @@ export function importMessage(s: string): Message{
   var pk: Message = {encryptedMessage, senderPublicKeys: publicKeys};
   return pk;
 }
-
-/***********
- * EXPORTS *
- ***********/
 
 export type { Kyber, Message, KyberSender, PublicKyber}
