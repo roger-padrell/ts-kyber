@@ -331,6 +331,7 @@ function listToString(l: List): string{
   return binaryToString(str);
 }
 
+/** The basic Kyber object to decrypt messages  */
 type Kyber = {
   signalSecret: Matrix,
   publicTable: Matrix,
@@ -338,11 +339,12 @@ type Kyber = {
   publicKeys: [List, List]
 }
 
+/** The Message Object that will be encrypted by KyberSender and decrypted by Kyber  */
 type Message = {
   encryptedMessage: Matrix,
   senderPublicKeys: [List, List]
 }
-    
+/** The KyberSender Object thwt will encrypt the Message */
 type KyberSender = {
   signalSecret: Matrix,
   publicTable: Matrix,
@@ -351,6 +353,7 @@ type KyberSender = {
   senderPublicKeys: [List, List]
 }
 
+/** A representation of the public values of a Kyber Object */
 type PublicKyber = {
   publicTable: Matrix,
   publicKeys: [List,List]
