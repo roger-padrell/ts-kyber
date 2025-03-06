@@ -356,17 +356,42 @@ type PublicKyber = {
   publicKeys: [List,List]
 }
 
+/** This function creates a Kyber Object from defined values
+@param publicTable The values for the output's public table
+@param signalSecret The values for the output's signal secret
+@param noiseSecret The values for the output's noise secret
+@returns The Kyber Object
+The public keys are automatically generated
+```
+let k: Kyber = createRandomKyber()
+```
+*/
 export function createKyberFrom(publicTable: Matrix, signalSecret: Matrix, noiseSecret: Matrix): Kyber{
   let publicKeys = generatePublicKey(publicTable, signalSecret, noiseSecret);
   var k: Kyber = {noiseSecret, signalSecret, publicTable, publicKeys };
   return k;
 }
 
+/** This function creates a Kyber Object with random secret and public keys
+@returns The Kyber Object
+```
+let k: Kyber = createRandomKyber()
+```
+*/
 export function createRandomKyber(): Kyber{
   var k: Kyber = createKyberFrom(generatePublicTable(), generateSignalSecret(), generateNoiseSecret());
   return k;
 }
 
+/** This function creates a KyberSender Object
+@param publicTable The public table from the reciever's kyber object
+@param recieverPublicKeys The public keys from the reciever's kyber object
+@returns The KyberSender Object
+```
+// 'k' is a Kyber Object, 'l' is a List
+let encrypted: Message = sendMessage(k, l)
+```
+*/
 export function createMessageSender(publicTable: Matrix, reciverPublicKeys: [List, List]): KyberSender{
   let noiseSecret = generateSenderNoiseSecret();
   let signalSecret = generateSenderSignalSecret();
@@ -375,12 +400,30 @@ export function createMessageSender(publicTable: Matrix, reciverPublicKeys: [Lis
   return k;
 }
 
+/** This function encrypts a List to a Message Object
+@param k This is the KyberSender Object which will encrypt the message
+@param mess The List to encrypt
+@returns The encrypted Message
+```
+// 'k' is a Kyber Object, 'l' is a List
+let encrypted: Message = sendMessage(k, l)
+```
+*/
 export function sendMessage(k: KyberSender, message: List): Message {
   let encryptedMessage = encryptMessage(message, k.signalSecret, k.reciverPublicKeys);
   let m: Message = {encryptedMessage: encryptedMessage, senderPublicKeys: k.senderPublicKeys}
   return m;
 }
 
+/** This function encrypts a string to a Message Object
+@param k This is the KyberSender Object which will encrypt the message
+@param mess The string to encrypt
+@returns The encrypted Message
+```
+// 'k' is a Kyber Object
+let encrypted: Message = sendString(k, "hello")
+```
+*/
 export function sendString(k: KyberSender, mess: string): Message{
   var message: List = stringToList(mess)
   if(message == initList()){
@@ -391,21 +434,54 @@ export function sendString(k: KyberSender, mess: string): Message{
   return m;
 }
 
+/** This function decrypts a List from a Message Object
+@param k This is the Kyber Object which will recieve the message
+@param m The Message to decrypt the List from
+@returns The decrypted List
+```
+// 'k' is a Kyber Object, 'm' is a Message Object
+let decrypted: List = recieveMessage(k, m)
+```
+*/
 export function recieveMessage(k: Kyber, m: Message): List{ 
   return decrypt(m.encryptedMessage, m.senderPublicKeys, k.signalSecret)
 }
 
+/** This function decrypts a string from a Message Object
+@param k This is the Kyber Object which will recieve the message
+@param m The Message to decrypt the string from
+@returns The decrypted string
+```
+// 'k' is a Kyber Object, 'm' is a Message Object
+let decrypted: string = recieveString(k, m)
+```
+*/
 export function recieveString(k: Kyber, me: Message): string {
   let m = recieveMessage(k, me)
   return listToString(m);
 }
 
-// Exporting
+/** This functions converts a Kyber Object to it's PublicKyber equivalent, so you can share it without revealing the secrets
+@param p This is the Kyber Object to export the pubic values from
+@returns A PublicKyber Object with the Kyber's public values
+```
+// 'k' is a Kyber Object
+let pb: PublicKyber = toPublic(k)
+```
+*/
 export function  toPublic(k: Kyber): PublicKyber{
   var p: PublicKyber = {publicKeys: k.publicKeys, publicTable: k.publicTable};
   return p;
 }
 
+/** This functions exports a PublicKyber Object to a JSON string containing it
+@param m This is the PublicKyber Object to export to a JSON string
+@returns The JSON string
+```
+// 'pk' is a PublicKyber Object
+let spk: string = publicString(pk) // "{...}"
+```
+*/
 export function publicString(p: PublicKyber): string{
   let publicKeys = JSON.stringify(p.publicKeys);
   let parr = publicKeys.split("")
@@ -416,6 +492,14 @@ export function publicString(p: PublicKyber): string{
   return JSON.stringify(str);
 }
 
+/** This functions exports a Kyber Object to a JSON string containing it
+@param m This is the Kyber Object to export to a JSON string
+@returns The JSON string
+```
+// 'k' is a Kyber Object
+let sk: string = exportFullKyber(k) // "{...}"
+```
+*/
 export function exportFullKyber(k: Kyber): string{
   let publicKeys = JSON.stringify(k.publicKeys);
   let parr = publicKeys.split("")
@@ -426,6 +510,14 @@ export function exportFullKyber(k: Kyber): string{
   return JSON.stringify(str);
 }
 
+/** This functions exports a Message Object to a JSON string containing it
+@param m This is the Message Object to export to a JSON string
+@returns The JSON string
+```
+// 'm' is a Message Object
+let sm: string = exportMessage(m) // "{...}"
+```
+*/
 export function exportMessage(m: Message): string{
   let publicKeys = JSON.stringify(m.senderPublicKeys);
   let parr = publicKeys.split("")
@@ -436,7 +528,13 @@ export function exportMessage(m: Message): string{
   return JSON.stringify(str);
 }
 
-// Importing
+/** This functions parses a PublicKyber Object from a JSON string containing it
+@param s This is the JSON string to decrypt
+@returns The parsed PublicKyber Object
+```
+let pk: kyb.PublicKyber = importPublicKyber("{...}");
+```
+*/
 export function importPublicKyber(s: string): PublicKyber{ 
   var js = JSON.parse(s);
   let publicTable = parseMatrix(4, js.publicTable);
@@ -451,6 +549,13 @@ export function importPublicKyber(s: string): PublicKyber{
   return pk;
 };
 
+/** This functions parses a Kyber Object from a JSON string containing it
+@param s This is the JSON string to decrypt
+@returns The parsed Kyber Object
+```
+let k: kyb.Kyber = importFullKyber("{...}");
+```
+*/
 export function importFullKyber(s: string): Kyber{
   var js = JSON.parse(s);
   let publicTable = parseMatrix(4, js.publicTable);
@@ -467,6 +572,13 @@ export function importFullKyber(s: string): Kyber{
   return pk;
 }
 
+/** This functions parses a Message Object from a JSON string containing it
+@param s This is the JSON string to decrypt
+@returns The parsed Message
+```
+let m: kyb.Message = importMessage("{...}");
+```
+*/
 export function importMessage(s: string): Message{
   var js = JSON.parse(s);
   let encryptedMessage = parseMatrix(1, js.encryptedMessage);
